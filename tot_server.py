@@ -15,16 +15,30 @@ import tornado.options
 import tornado.web
 import unicodedata
 import logging
+import datetime
+import uuid
 
 import smtp_client
+import tot_util
 
 from tornado.options import define, options
 
 define("port", default=8888, help="run on the given port", type=int)
 define("mysql_host", default="127.0.0.1:3306", help="blog database host")
+#####
 define("mysql_database", default="tot_user", help="tot database name")
 define("mysql_user", default="totdev", help="database username")
 define("mysql_password", default="totdev", help="database password")
+##### EC2 db login
+#define("mysql_database", default="tot_db", help="tot database name")
+#define("mysql_user", default="root", help="database username")
+#define("mysql_password", default="", help="database password")
+
+
+response_code = {'login_success': 0, 'login_unmatch': 1, 'login_no_usr': 2,
+                 'reg_success': 10, 'reg_usr_exist': 11,
+                 'reset_success': 20, 'reset_old_pc_wrong': 21, 'reset_no_usr': 22,
+                 'retrieve_link_snd': 30, 'retrieve_fail': 31}
 
 class Application(tornado.web.Application):
     def __init__(self):
@@ -34,19 +48,18 @@ class Application(tornado.web.Application):
             (r"/auth/logout", AuthLogoutHandler),
             (r"/register", RegisterHandler),
             (r"/deleteacct", DeleteAcctHandler),
-            (r"/m/auth/login", MobileAuthLoginHandler),
-            (r"/m/register", MobileRegisterHandler)
-            #(r"/archive", ArchiveHandler),
-            #(r"/feed", FeedHandler),
-            #(r"/entry/([^/]+)", EntryHandler),
-            #(r"/compose", ComposeHandler),
+            (r"/forgetpassword", ForgetPasswordHandler),
+            (r"/resetpasswordtoken", ResetPasswordWithTokenHandler),
+            (r"/m/login", AppAuthLoginHandler),
+            (r"/m/reg", AppRegisterHandler),
+            (r"/m/reset", AppResetPasswordHandler),
+            (r"/m/forget", AppForgetPasswordHandler)
         ]
         settings = dict(
-            blog_title=u"Tornado Blog",
             template_path=os.path.join(os.path.dirname(__file__), "templates"),
             static_path=os.path.join(os.path.dirname(__file__), "static"),
-            ui_modules={"Entry": EntryModule},
-            xsrf_cookies=True,
+            #ui_modules={"Entry": EntryModule},
+            xsrf_cookies=False,
             cookie_secret="19850116",
             login_url="/auth/login",
             debug=True,
@@ -79,85 +92,9 @@ class BaseHandler(tornado.web.RequestHandler):
 class HomeHandler(BaseHandler):
     @tornado.web.authenticated
     def get(self):
-        #self.write("hello world")
         user_id = self.get_secure_cookie("user")
         self.render("tothome.html", uname=str(user_id))
         return
-        entries = self.db.query("SELECT * FROM entries ORDER BY published "
-                                "DESC LIMIT 5")
-        if not entries:
-            self.redirect("/compose")
-            return
-        self.render("home.html", entries=entries)
-
-################################
-##   EntryHandler (not called)
-################################
-class EntryHandler(BaseHandler):
-    def get(self, slug):
-        entry = self.db.get("SELECT * FROM entries WHERE slug = %s", slug)
-        if not entry: raise tornado.web.HTTPError(404)
-        self.render("entry.html", entry=entry)
-
-################################
-##   ArchiveHandler (not called)
-################################
-class ArchiveHandler(BaseHandler):
-    def get(self):
-        entries = self.db.query("SELECT * FROM entries ORDER BY published "
-                                "DESC")
-        self.render("archive.html", entries=entries)
-
-################################
-##   FeedHandler (not called)
-################################
-class FeedHandler(BaseHandler):
-    def get(self):
-        entries = self.db.query("SELECT * FROM entries ORDER BY published "
-                                "DESC LIMIT 10")
-        self.set_header("Content-Type", "application/atom+xml")
-        self.render("feed.xml", entries=entries)
-
-################################
-##   ComposeHandler (not called)
-################################
-class ComposeHandler(BaseHandler):
-    @tornado.web.authenticated
-    def get(self):
-        id = self.get_argument("id", None)
-        entry = None
-        if id:
-            entry = self.db.get("SELECT * FROM entries WHERE id = %s", int(id))
-        self.render("compose.html", entry=entry)
-
-    @tornado.web.authenticated
-    def post(self):
-        id = self.get_argument("id", None)
-        title = self.get_argument("title")
-        text = self.get_argument("markdown")
-        html = markdown.markdown(text)
-        if id:
-            entry = self.db.get("SELECT * FROM entries WHERE id = %s", int(id))
-            if not entry: raise tornado.web.HTTPError(404)
-            slug = entry.slug
-            self.db.execute(
-                "UPDATE entries SET title = %s, markdown = %s, html = %s "
-                "WHERE id = %s", title, text, html, int(id))
-        else:
-            slug = unicodedata.normalize("NFKD", title).encode(
-                "ascii", "ignore")
-            slug = re.sub(r"[^\w]+", " ", slug)
-            slug = "-".join(slug.lower().strip().split())
-            if not slug: slug = "entry"
-            while True:
-                e = self.db.get("SELECT * FROM entries WHERE slug = %s", slug)
-                if not e: break
-                slug += "-2"
-            self.db.execute(
-                "INSERT INTO entries (author_id,title,slug,markdown,html,"
-                "published) VALUES (%s,%s,%s,%s,%s,UTC_TIMESTAMP())",
-                self.current_user.id, title, slug, text, html)
-        self.redirect("/entry/" + slug)
 
 ################################
 ##   AuthLoginHandler
@@ -178,41 +115,18 @@ class AuthLoginHandler(BaseHandler):
             self.render("login.html", login_msg="User not found!")
             return
         if user_db.passcode != passcode:
-            login_response = {
-                'error': True, 
-                'msg': 'Thank You.'
-            }
-            self.write(login_response)
-            ### self.render("login.html", login_msg="Email and password not match. Please try again.")
+            #login_response = {
+            #    'error': True,
+            #    'msg': 'Thank You.'
+            #}
+            #self.write(login_response)
+            self.render("login.html", login_msg="Email and password not match. Please try again.")
             return
 
         self.set_secure_cookie("user", user_db.uname)
         self.set_secure_cookie("passcode", user_db.passcode)
         self.set_secure_cookie("email", user_db.email)
         self.redirect("/")
-
-'''
-    #### this method is not used ####
-    def _on_auth(self, user):
-        if not user:
-            raise tornado.web.HTTPError(500, "Google auth failed")
-        author = self.db.get("SELECT * FROM authors WHERE email = %s",
-                             user["email"])
-        if not author:
-            # Auto-create first author
-            any_author = self.db.get("SELECT * FROM authors LIMIT 1")
-            if not any_author:
-                author_id = self.db.execute(
-                    "INSERT INTO authors (email,name) VALUES (%s,%s)",
-                    user["email"], user["name"])
-            else:
-                self.redirect("/")
-                return
-        else:
-            author_id = author["id"]
-        self.set_secure_cookie("blogdemo_user", str(author_id))
-        self.redirect(self.get_argument("next", "/"))
-'''
 
 ################################
 ##   RegisterHandler
@@ -222,7 +136,7 @@ class RegisterHandler(BaseHandler):
     def get(self):
         logging.getLogger("tornado.general").info("RegisterHandler::get...")
         self.render("register.html")
-        
+
     def post(self):
         logging.getLogger("tornado.general").info("RegisterHandler::post...")
         username = self.get_argument("name")
@@ -248,7 +162,7 @@ class RegisterHandler(BaseHandler):
         smtp_client.send_mail('welcome.txt', email, username)
         # redirect to home page
         self.redirect("/")
-            
+
 ################################
 ##    AuthLogoutHandler
 ################################
@@ -285,69 +199,203 @@ class DeleteAcctHandler(BaseHandler):
         self.redirect("/")
 
 ################################
-##    MobileAuthLoginHandler
+##    AppAuthLoginHandler
+##    - app login
 ################################
-class MobileAuthLoginHandler(BaseHandler):
+class AppAuthLoginHandler(BaseHandler):
     @tornado.web.asynchronous
     def post(self):
-        logging.getLogger("tornado.general").info("AuthLoginHandler::post...")
+        logging.getLogger("tornado.general").info("MobileAuthLoginHandler::post...")
         email = self.get_argument("email")
         passcode = self.get_argument("passcode")
+        logging.getLogger("tornado.general").info("Email:" + email)
+        logging.getLogger("tornado.general").info("Passcode:" + passcode)
         # find a match in the db
         user_db = self.db.get("SELECT * FROM users WHERE email = %s", str(email))
         if not user_db:
-            self.render("login.html", login_msg="User not found!")
+            self.write(str(response_code['login_no_usr']))
+            self.finish()
             return
         if user_db.passcode != passcode:
-            self.render("login.html", login_msg="Email and password not match. Please try again.")
+            self.write(str(response_code['login_unmatch']))
+            self.finish()
             return
 
-        self.set_secure_cookie("user", user_db.uname)
-        self.set_secure_cookie("passcode", user_db.passcode)
-        self.set_secure_cookie("email", user_db.email)
-        self.redirect("/")
+        self.write(str(response_code['login_success']))
+        self.finish()
 
 ################################
-##   MobileRegisterHandler
+##   AppRegisterHandler
+##   - register new user from within the app
 ################################
-class MobileRegisterHandler(BaseHandler):
+class AppRegisterHandler(BaseHandler):
     @tornado.web.asynchronous
-    def get(self):
-        logging.getLogger("tornado.general").info("RegisterHandler::get...")
-        self.render("register.html")
-        
     def post(self):
         logging.getLogger("tornado.general").info("RegisterHandler::post...")
         username = self.get_argument("name")
         email = self.get_argument("email")
-        passcode0 = self.get_argument("passcode0")
-        passcode1 = self.get_argument("passcode1")
-        if passcode0 != passcode1 :
-            self.render("register.html", reg_msg="Two passcodes must match! Please re-fill the info.")
+        passcode = self.get_argument("passcode")
+        usr_db = self.db.get("SELECT * FROM users WHERE email = %s", str(email))
+        # email exists in db
+        if usr_db:
+            self.write(str(response_code['reg_usr_exist']))
+            self.finish()
             return
-        # check if the username has been used
-        email_db = self.db.get("SELECT * FROM users WHERE email = %s", str(email))
-        if email_db:
-            self.render("register.html", reg_msg="Email address already used! You may want to log in.")
-            return
-        # create a new user if email addr not found in db
+        # create a new user
         self.db.execute(
             "INSERT INTO users (email, uname, passcode) VALUES (%s, %s, %s)",
-            str(email), str(username), str(passcode0))
-        self.set_secure_cookie("user", username)
-        self.set_secure_cookie("passcode", passcode0)
-        self.set_secure_cookie("email", email)
+            str(email), str(username), str(passcode))
         # send confirmation email
         smtp_client.send_mail('welcome.txt', email, username)
-        # redirect to home page
+        # send response to app
+        self.write(str(response_code['reg_success']))
+        self.finish()
+
+################################
+##   AppResetPasswordHandler
+##   - reset password from within the app
+################################
+class AppResetPasswordHandler(BaseHandler):
+    @tornado.web.asynchronous
+    def post(self):
+        logging.getLogger("tornado.general").info("MobileResetPasswordHandler::post...")
+        email = self.get_argument("email")
+        old_passcode = self.get_argument("old_passcode")
+        new_passcode = self.get_argument("new_passcode")
+        # authenticate old passcode
+        usr_db = self.db.get("SELECT * FROM users WHERE email = %s", str(email))
+        if not usr_db :
+            self.write(str(response_code['reset_no_usr']))
+            self.finish()
+            return
+        if old_passcode != usr_db.passcode :
+            self.write(str(response_code['reset_old_pc_wrong']))
+            self.finish()
+            return
+        # set new passcode for user
+        self.db.execute(
+            "UPDATE users set passcode=%s WHERE email=%s", str(new_passcode), str(email))
+
+        # send notification email
+        # smtp_client.send_mail('welcome.txt', email, username)
+
+        # send response to app
+        self.write(str(response_code['reset_success']))
+        self.finish()
+
+################################
+##   AppForgetPasswordHandler
+##   - request reset password token from within the app b/c usr forgets password
+################################
+class AppForgetPasswordHandler(BaseHandler):
+    @tornado.web.asynchronous
+    def post(self):
+        logging.getLogger("tornado.general").info("MobileForgetPasswordHandler::post...")
+        email = self.get_argument("email")
+        passcode = self.get_argument("passcode")
+        # authenticate old passcode
+        usr_db = self.db.get("SELECT * FROM users WHERE email = %s", str(email))
+        if not usr_db :
+            self.write(str(response_code['retrieve_fail']))
+            self.finish()
+            return
+        if usr_db.passcode != passcode :
+            self.write(str(response_code['retrieve_fail']))
+            self.finish()
+            return
+
+        # send notification email
+        # smtp_client.send_mail('welcome.txt', email, usr_db.username)
+
+        # send response to app
+        self.write(str(response_code['retrieve_link_snd']))
+        self.finish()
+
+################################
+##   ForgetPasswordHandler
+##   - request reset password from web b/c usr forgets password
+##   - create a db entry recording the expiration and token
+##   - send token to usr email
+################################
+class ForgetPasswordHandler(BaseHandler):
+    @tornado.web.asynchronous
+    def get(self):
+         logging.getLogger("tornado.general").info("ForgetPasswordHandler::get...")
+         self.render("forgetpassword.html", login_msg="")
+
+    def post(self):
+        logging.getLogger("tornado.general").info("ForgetPasswordHandler::post...")
+        email = self.get_argument("email")
+        # check whether the email is registered
+        usr_db = self.db.get("SELECT * FROM users WHERE email = %s", str(email))
+        if not usr_db :
+            self.render("forgetpassword.html", msg="Email not found.")
+            return
+        # create expiration date and uuid for the user
+        expire_date = datetime.datetime.now() + datetime.timedelta(days=1) # 24-hour expiration period
+        str_expire_date = expire_date.strftime('%Y-%m-%d %H:%M:%S')
+        token = tot_util.rnd_str_generator()
+        # update database with the expiration date and uuid
+        forgetPasswordUser_db = self.db.get("SELECT * FROM ForgetPasswordUsers WHERE email = %s", str(email))
+        if not forgetPasswordUser_db:
+            self.db.execute(
+                "INSERT INTO ForgetPasswordUsers (email, PasswordResetToken, PasswordResetExpiration) VALUES (%s, %s, %s)",
+                str(email), token, str_expire_date )
+        else:
+            self.db.execute(
+                "UPDATE ForgetPasswordUsers SET PasswordResetToken=%s, PasswordResetExpiration=%s WHERE email=%s", 
+                token, str_expire_date, str(email))
+        # send an email with a reset password link
+        smtp_client.send_forgetpassword_mail(email, usr_db.uname, token)
+
+        # print msg
+        self.redirect("/resetpasswordtoken")
+
+################################
+##  ResetPasswordWithTokenHandler
+##  - check token and expiration date
+##  - sanity check of the new password
+##  - reset passcode
+##  - send confirm email?
+################################
+class ResetPasswordWithTokenHandler(BaseHandler):
+    @tornado.web.asynchronous
+    def get(self):
+        logging.getLogger("tornado.general").info("ResetPasswordWithTokenHandler::get...")
+        self.render("resetpasswordwithtoken.html", msg="")
+     
+    def post(self):
+        logging.getLogger("tornado.general").info("ResetPasswordWithTokenHandler::post...")
+        # check token and expiration
+        email = self.get_argument("email")
+        token = self.get_argument("token")
+        logging.getLogger("tornado.general").info("ResetPasswordWithTokenHandler::post...01")
+        forgetPasswordUser_db = self.db.get("SELECT * FROM ForgetPasswordUsers WHERE email = %s", str(email) )
+        if not forgetPasswordUser_db:
+            self.render("resetpasswordwithtoken.html", msg="Did you request to reset the password?")
+            return
+        if not token == forgetPasswordUser_db.PasswordResetToken:
+            self.render("resetpasswordwithtoken.html", msg="Invalid token")
+            return
+        now_date = datetime.datetime.now()
+        expire_date = forgetPasswordUser_db.PasswordResetExpiration
+        if ( now_date - expire_date > datetime.timedelta(days = 1) ):
+            self.render("resetpasswordwithtoken.html", msg="Token expires.")
+            return
+        logging.getLogger("tornado.general").info("ResetPasswordWithTokenHandler::post...02")
+        # reset the password
+        new_password = self.get_argument("password")
+        new_password_again = self.get_argument("password_again")
+        if new_password != new_password_again:
+            self.render("resetpasswordwithtoken.html", msg="Two passwords do not match.")
+            return
+        self.db.execute(
+            "UPDATE users set passcode=%s WHERE email=%s", str(new_password), str(email) )
+        self.db.execute(
+            "DELETE from ForgetPasswordUsers WHERE email = %s", str(email) )
         self.redirect("/")
-            
-################################
-##    EntryModule
-################################
-class EntryModule(tornado.web.UIModule):
-    def render(self, entry):
-        return self.render_string("modules/entry.html", entry=entry)
+        return
+
 
 ################################
 ##    main

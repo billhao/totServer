@@ -24,3 +24,10 @@ CREATE TABLE entries (
     entry VARCHAR(1024) NOT NULL,
     published DATETIME NOT NULL
 );
+
+DROP TABLE IF EXISTS ForgetPasswordUsers;
+CREATE TABLE ForgetPasswordUsers (
+    email VARCHAR(100) NOT NULL UNIQUE PRIMARY KEY REFERENCES users(email),
+    PasswordResetToken VARCHAR(1024) NOT NULL,
+    PasswordResetExpiration DATETIME NOT NULL
+);

@@ -30,6 +30,28 @@ def send_mail(msg_file, dest, name):
     server.quit()
     return
 
+def send_forgetpassword_mail(dest, name, token):
+    ## Construct the message
+    msg = MIMEText('Dear ' + name + ',\n\n' + 'Please use the token below to reset your password at \nhttp://www.gettot.com/reset_passcode_w_token:\n\n' + token + '\n\n'+ 'This token expires in 24 hours\n\n' + 'Sincerely,\n'+ 'TOT Dev Team\n')
+    msg['Subject'] = 'Reset your TOT account password'
+    msg['From'] = 'totdevteam@gmail.com' # me
+    msg['To'] = dest  # you
+    #print 'sending msg:'
+    #print msg.as_string()
+    ## Setup SMTP server
+    gmail_user = 'totdevteam@gmail.com'
+    gmail_pwd = 'totdev2013'
+    sender_id = 'totdevteam@tot.com'
+    server = smtplib.SMTP('smtp.gmail.com',587)
+    server.ehlo()
+    server.starttls()
+    server.ehlo
+    server.login(gmail_user, gmail_pwd)
+    server.sendmail(sender_id, dest, msg.as_string())
+    #print 'done!'
+    server.quit()
+    return
+
 def main(argv):
     parser = optparse.OptionParser()
     parser.add_option('-d', action="store", dest="dest", help="dest_email_addr", default="lihangzhao@gmail.com")
