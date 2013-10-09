@@ -24,15 +24,15 @@ import tot_util
 from tornado.options import define, options
 
 define("port", default=8888, help="run on the given port", type=int)
-define("mysql_host", default="127.0.0.1:3306", help="blog database host")
+define("mysql_host", default="127.0.0.1:3306", help="database host")
 #####
-define("mysql_database", default="tot_user", help="tot database name")
-define("mysql_user", default="totdev", help="database username")
-define("mysql_password", default="totdev", help="database password")
+#define("mysql_database", default="tot_user", help="tot database name")
+#define("mysql_user", default="totdev", help="database username")
+#define("mysql_password", default="totdev", help="database password")
 ##### EC2 db login
-#define("mysql_database", default="tot_db", help="tot database name")
-#define("mysql_user", default="root", help="database username")
-#define("mysql_password", default="", help="database password")
+define("mysql_database", default="tot_db", help="tot database name")
+define("mysql_user", default="root", help="database username")
+define("mysql_password", default="", help="database password")
 
 
 response_code = {'login_success': 0, 'login_unmatch': 1, 'login_no_usr': 2,
@@ -159,7 +159,7 @@ class RegisterHandler(BaseHandler):
         self.set_secure_cookie("passcode", passcode0)
         self.set_secure_cookie("email", email)
         # send confirmation email
-        smtp_client.send_mail('welcome.txt', email, username)
+        smtp_client.send_mail('./templates/welcome.txt', email, username)
         # redirect to home page
         self.redirect("/")
 
@@ -246,7 +246,7 @@ class AppRegisterHandler(BaseHandler):
             "INSERT INTO users (email, uname, passcode) VALUES (%s, %s, %s)",
             str(email), str(username), str(passcode))
         # send confirmation email
-        smtp_client.send_mail('welcome.txt', email, username)
+        smtp_client.send_mail('./templates/welcome.txt', email, username)
         # send response to app
         self.write(str(response_code['reg_success']))
         self.finish()
@@ -343,8 +343,7 @@ class ForgetPasswordHandler(BaseHandler):
                 str(email), token, str_expire_date )
         else:
             self.db.execute(
-                "UPDATE ForgetPasswordUsers SET PasswordResetToken=%s, PasswordResetExpiration=%s WHERE email=%s", 
-                token, str_expire_date, str(email))
+                "UPDATE ForgetPasswordUsers SET PasswordResetToken=%s, PasswordResetExpiration=%s WHERE email=%s", token, str_expire_date, str(email))
         # send an email with a reset password link
         smtp_client.send_forgetpassword_mail(email, usr_db.uname, token)
 

@@ -4,6 +4,8 @@
 -- Aug 9. 2013
 --
 
+CREATE DATABASE IF NOT EXISTS tot_db;
+
 SET SESSION storage_engine = "InnoDB";
 SET SESSION time_zone = "+0:00";
 ALTER DATABASE CHARACTER SET "utf8";
