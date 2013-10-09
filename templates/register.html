@@ -1,0 +1,23 @@
+<html>
+<body>
+Please register here:
+<form action="/register" method="post">
+Username: <input type="text" name="name"> <br>
+Email   : <input type="text" name="email"> <br>
+Passcode: <input type="password" name="passcode0"> <br>
+Passcode again: <input type="password" name="passcode1"> <br>
+<input type="submit" value="Register"> 
+{% raw xsrf_form_html() %}
+<br>
+{% try %}
+    {% set msg_ = reg_msg %}
+{% except NameError %}
+    {% set msg_ = '' %}
+{% end %}
+{{ msg_ }}
+<br>
+<br>
+<a href="/auth/login">Log-in here</a>
+</form>
+</body>
+</html>
