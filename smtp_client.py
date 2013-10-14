@@ -2,7 +2,7 @@
 ## simple smtp client using gmail smtp server - totdev - 08/07/2013
 ##
 
-import smtplib, sys, optparse
+import smtplib, sys, optparse, urllib
 
 from email.mime.text import MIMEText
 
@@ -30,9 +30,10 @@ def send_mail(msg_file, dest, name):
     server.quit()
     return
 
-def send_forgetpassword_mail(dest, name, token):
+def send_forgetpassword_mail(dest, name, token, email):
     ## Construct the message
-    msg = MIMEText('Dear ' + name + ',\n\n' + 'Please use the token below to reset your password at \nhttp://www.gettot.com/reset_passcode_w_token:\n\n' + token + '\n\n'+ 'This token expires in 24 hours\n\n' + 'Sincerely,\n'+ 'TOT Dev Team\n')
+    email_encode = urllib.quote(email, '')
+    msg = MIMEText('Dear ' + name + ',\n\n' + 'Please use the token below to reset your password at \nhttps://www.gettot.com/resetpasswordtoken?token=' + token + '&email=' + email_encode + '\n\n'+ 'This token expires in 24 hours\n\n' + 'Sincerely,\n'+ 'TOT Dev Team\n')
     msg['Subject'] = 'Reset your TOT account password'
     msg['From'] = 'totdevteam@gmail.com' # me
     msg['To'] = dest  # you

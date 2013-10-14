@@ -36,9 +36,9 @@ define("mysql_password", default="", help="database password")
 
 
 response_code = {'login_success': 0, 'login_unmatch': 1, 'login_no_usr': 2,
-                 'reg_success': 10, 'reg_usr_exist': 11,
-                 'reset_success': 20, 'reset_old_pc_wrong': 21, 'reset_no_usr': 22,
-                 'retrieve_link_snd': 30, 'retrieve_fail': 31}
+                 'reg_success': 0, 'reg_usr_exist': 11,
+                 'reset_success': 0, 'reset_old_pc_wrong': 21, 'reset_no_usr': 22,
+                 'retrieve_link_snd': 0, 'retrieve_fail': 31}
 
 class Application(tornado.web.Application):
     def __init__(self):
@@ -81,9 +81,9 @@ class BaseHandler(tornado.web.RequestHandler):
 
     def get_current_user(self):
         logging.getLogger("tornado.general").info("BaseHandler::get_current_user...")
-        user_id = self.get_secure_cookie("user")
+        user_id = self.get_secure_cookie("email")
         if not user_id: return None
-        return self.get_secure_cookie("user")
+        return self.get_secure_cookie("email")
         #return self.db.get("SELECT * FROM authors WHERE id = %s", int(user_id))
 
 ################################
@@ -109,7 +109,9 @@ class AuthLoginHandler(BaseHandler):
         logging.getLogger("tornado.general").info("AuthLoginHandler::post...")
         email = self.get_argument("email")
         passcode = self.get_argument("passcode")
-        # find a match in the db
+        logging.getLogger("tornado.general").info("Email:" + email)
+        logging.getLogger("tornado.general").info("Passcode:" + passcode)
+	# find a match in the db
         user_db = self.db.get("SELECT * FROM users WHERE email = %s", str(email))
         if not user_db:
             self.render("login.html", login_msg="User not found!")
@@ -246,7 +248,7 @@ class AppRegisterHandler(BaseHandler):
             "INSERT INTO users (email, uname, passcode) VALUES (%s, %s, %s)",
             str(email), str(username), str(passcode))
         # send confirmation email
-        smtp_client.send_mail('./templates/welcome.txt', email, username)
+        ##smtp_client.send_mail('./templates/welcome.txt', email, username)
         # send response to app
         self.write(str(response_code['reg_success']))
         self.finish()
@@ -290,26 +292,34 @@ class AppResetPasswordHandler(BaseHandler):
 class AppForgetPasswordHandler(BaseHandler):
     @tornado.web.asynchronous
     def post(self):
-        logging.getLogger("tornado.general").info("MobileForgetPasswordHandler::post...")
+        logging.getLogger("tornado.general").info("AppForgetPasswordHandler::post...")
         email = self.get_argument("email")
-        passcode = self.get_argument("passcode")
-        # authenticate old passcode
+        # check whether the email is registered
         usr_db = self.db.get("SELECT * FROM users WHERE email = %s", str(email))
         if not usr_db :
             self.write(str(response_code['retrieve_fail']))
-            self.finish()
+	    self.finish()
             return
-        if usr_db.passcode != passcode :
-            self.write(str(response_code['retrieve_fail']))
-            self.finish()
-            return
-
-        # send notification email
-        # smtp_client.send_mail('welcome.txt', email, usr_db.username)
-
-        # send response to app
+        # create expiration date and uuid for the user
+        expire_date = datetime.datetime.now() + datetime.timedelta(days=1) # 24-hour expiration period
+        str_expire_date = expire_date.strftime('%Y-%m-%d %H:%M:%S')
+        token = tot_util.rnd_str_generator()
+        # update database with the expiration date and uuid
+        forgetPasswordUser_db = self.db.get("SELECT * FROM ForgetPasswordUsers WHERE email = %s", str(email))
+        if not forgetPasswordUser_db:
+            self.db.execute(
+                "INSERT INTO ForgetPasswordUsers (email, PasswordResetToken, PasswordResetExpiration) VALUES (%s, %s, %s)",
+                str(email), token, str_expire_date )
+        else:
+            self.db.execute(
+                "UPDATE ForgetPasswordUsers SET PasswordResetToken=%s, PasswordResetExpiration=%s WHERE email=%s", token, str_expire_date, str(email))
+        # send an email with a reset password link
+        smtp_client.send_forgetpassword_mail(email, usr_db.uname, token, email)
+	
+	# send response to app
         self.write(str(response_code['retrieve_link_snd']))
         self.finish()
+
 
 ################################
 ##   ForgetPasswordHandler
@@ -345,10 +355,10 @@ class ForgetPasswordHandler(BaseHandler):
             self.db.execute(
                 "UPDATE ForgetPasswordUsers SET PasswordResetToken=%s, PasswordResetExpiration=%s WHERE email=%s", token, str_expire_date, str(email))
         # send an email with a reset password link
-        smtp_client.send_forgetpassword_mail(email, usr_db.uname, token)
+        smtp_client.send_forgetpassword_mail(email, usr_db.uname, token, email)
 
         # print msg
-        self.redirect("/resetpasswordtoken")
+        self.redirect("/")
 
 ################################
 ##  ResetPasswordWithTokenHandler
@@ -361,14 +371,24 @@ class ResetPasswordWithTokenHandler(BaseHandler):
     @tornado.web.asynchronous
     def get(self):
         logging.getLogger("tornado.general").info("ResetPasswordWithTokenHandler::get...")
-        self.render("resetpasswordwithtoken.html", msg="")
+        token_in = self.get_argument("token")
+	email_in = self.get_argument("email")
+	forgetPasswordUser_db = self.db.get("SELECT * FROM ForgetPasswordUsers WHERE email = %s", str(email_in) )
+        if not forgetPasswordUser_db:
+	    msg_in = "Email not found"
+	    self.render("resetpasswordwithtoken.html", msg=msg_in, token=token_in, email=email_in)
+	    return
+	now_date = datetime.datetime.now()
+        expire_date = forgetPasswordUser_db.PasswordResetExpiration
+	if ( now_date - expire_date > datetime.timedelta(days = 1) ):
+	    msg_in = "Token expired!"
+	self.render("resetpasswordwithtoken.html", msg=msg_in, token=token_in, email=email_in)
      
     def post(self):
         logging.getLogger("tornado.general").info("ResetPasswordWithTokenHandler::post...")
         # check token and expiration
         email = self.get_argument("email")
-        token = self.get_argument("token")
-        logging.getLogger("tornado.general").info("ResetPasswordWithTokenHandler::post...01")
+        token = self.get_argument("token_in")
         forgetPasswordUser_db = self.db.get("SELECT * FROM ForgetPasswordUsers WHERE email = %s", str(email) )
         if not forgetPasswordUser_db:
             self.render("resetpasswordwithtoken.html", msg="Did you request to reset the password?")
