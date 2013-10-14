@@ -17,6 +17,7 @@ import unicodedata
 import logging
 import datetime
 import uuid
+import passlib
 
 import smtp_client
 import tot_util
@@ -373,6 +374,7 @@ class ResetPasswordWithTokenHandler(BaseHandler):
         logging.getLogger("tornado.general").info("ResetPasswordWithTokenHandler::get...")
         token_in = self.get_argument("token")
 	email_in = self.get_argument("email")
+	msg_in = ''
 	forgetPasswordUser_db = self.db.get("SELECT * FROM ForgetPasswordUsers WHERE email = %s", str(email_in) )
         if not forgetPasswordUser_db:
 	    msg_in = "Email not found"
