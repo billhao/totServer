@@ -305,13 +305,16 @@ class AppResetPasswordHandler(BaseHandler):
             self.write(str(response_code['reset_no_usr']))
             self.finish()
             return
-        if old_passcode != usr_db.passcode :
+        #if old_passcode != usr_db.passcode :
+        if not pbkdf2_sha256.verify(str(old_passcode), user_db.passcode): 
             self.write(str(response_code['reset_old_pc_wrong']))
             self.finish()
             return
+        # hash the passcode
+        hash_pw = pbkdf2_sha256.encrypt(str(new_passcode), rounds=1000, salt_size=6)
         # set new passcode for user
         self.db.execute(
-            "UPDATE users set passcode=%s WHERE email=%s", str(new_passcode), str(email))
+            "UPDATE users set passcode=%s WHERE email=%s", str(hash_pw), str(email))
 
         # send notification email
         # smtp_client.send_mail('welcome.txt', email, username)
@@ -444,8 +447,11 @@ class ResetPasswordWithTokenHandler(BaseHandler):
         if new_password != new_password_again:
             self.render("resetpasswordwithtoken.html", msg="Two passwords do not match.")
             return
+        # hash the passcode
+        hash_pw = pbkdf2_sha256.encrypt(str(new_password), rounds=1000, salt_size=6)
+        # update db
         self.db.execute(
-            "UPDATE users set passcode=%s WHERE email=%s", str(new_password), str(email) )
+            "UPDATE users set passcode=%s WHERE email=%s", str(hash_pw), str(email) )
         self.db.execute(
             "DELETE from ForgetPasswordUsers WHERE email = %s", str(email) )
         self.redirect("/")
