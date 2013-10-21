@@ -17,8 +17,12 @@ import unicodedata
 import logging
 import datetime
 import uuid
-import passlib
+import base64
+import functools
 
+from passlib.hash import pbkdf2_sha256
+
+#### user-defined packages
 import smtp_client
 import tot_util
 
@@ -40,6 +44,28 @@ response_code = {'login_success': 0, 'login_unmatch': 1, 'login_no_usr': 2,
                  'reg_success': 0, 'reg_usr_exist': 11,
                  'reset_success': 0, 'reset_old_pc_wrong': 21, 'reset_no_usr': 22,
                  'retrieve_link_snd': 0, 'retrieve_fail': 31}
+
+# HTTP Basic Authentication decorator
+def httpBA(method):
+    @functools.wraps(method)
+    def wrapper(self, *args, **kwargs):
+        #error_authentication = self.application.settings.get('error_auth')
+        auth_header = self.request.headers.get('Authorization', None)
+        
+        if auth_header is None:
+            logging.getLogger("tornado.general").info("httpBA: not pass")
+            return self.write("HTTP BA not pass")
+        
+        s, base64string = authorization_header.split()
+        username, password = base64.decodestring(base64string).split(':')
+        
+        if password != 0000:
+            logging.getLogger("tornado.general").info("httpBA: not pass")
+            return self.write("HTTP BA not pass")
+
+        return method(self, *args, **kwargs)
+    return wrapper
+
 
 class Application(tornado.web.Application):
     def __init__(self):
@@ -117,7 +143,9 @@ class AuthLoginHandler(BaseHandler):
         if not user_db:
             self.render("login.html", login_msg="User not found!")
             return
-        if user_db.passcode != passcode:
+        
+        #if user_db.passcode != passcode:
+        if not pbkdf2_sha256.verify(str(passcode), user_db.passcode):
             #login_response = {
             #    'error': True,
             #    'msg': 'Thank You.'
@@ -154,10 +182,12 @@ class RegisterHandler(BaseHandler):
         if email_db:
             self.render("register.html", reg_msg="Email address already used! You may want to log in.")
             return
+        # hash the passcode
+        hash_pw = pbkdf2_sha256.encrypt(str(passcode0), rounds=1000, salt_size=6)
         # create a new user if email addr not found in db
         self.db.execute(
             "INSERT INTO users (email, uname, passcode) VALUES (%s, %s, %s)",
-            str(email), str(username), str(passcode0))
+            str(email), str(username), str(hash_pw))
         self.set_secure_cookie("user", username)
         self.set_secure_cookie("passcode", passcode0)
         self.set_secure_cookie("email", email)
@@ -180,6 +210,7 @@ class AuthLogoutHandler(BaseHandler):
 ##    DeleteAcctHandler
 ################################
 class DeleteAcctHandler(BaseHandler):
+    @httpBA
     def get(self):
         user_email = self.get_secure_cookie("email")
         if not user_email:
@@ -219,7 +250,8 @@ class AppAuthLoginHandler(BaseHandler):
             self.write(str(response_code['login_no_usr']))
             self.finish()
             return
-        if user_db.passcode != passcode:
+        #if user_db.passcode != passcode:
+        if not pbkdf2_sha256.verify(str(passcode), user_db.passcode):    
             self.write(str(response_code['login_unmatch']))
             self.finish()
             return
@@ -244,12 +276,14 @@ class AppRegisterHandler(BaseHandler):
             self.write(str(response_code['reg_usr_exist']))
             self.finish()
             return
+        # hash the passcode
+        hash_pw = pbkdf2_sha256.encrypt(str(passcode), rounds=1000, salt_size=6)
         # create a new user
         self.db.execute(
             "INSERT INTO users (email, uname, passcode) VALUES (%s, %s, %s)",
-            str(email), str(username), str(passcode))
+            str(email), str(username), str(hash_pw))
         # send confirmation email
-        ##smtp_client.send_mail('./templates/welcome.txt', email, username)
+        smtp_client.send_mail('./templates/welcome.txt', email, username)
         # send response to app
         self.write(str(response_code['reg_success']))
         self.finish()
