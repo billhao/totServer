@@ -59,7 +59,7 @@ def httpBA(method):
         s, base64string = authorization_header.split()
         username, password = base64.decodestring(base64string).split(':')
         
-        if password != 0000:
+        if password != "0000":
             logging.getLogger("tornado.general").info("httpBA: not pass")
             return self.write("HTTP BA not pass")
 
@@ -237,6 +237,7 @@ class DeleteAcctHandler(BaseHandler):
 ##    - app login
 ################################
 class AppAuthLoginHandler(BaseHandler):
+    @httpBA
     @tornado.web.asynchronous
     def post(self):
         logging.getLogger("tornado.general").info("MobileAuthLoginHandler::post...")
@@ -264,6 +265,7 @@ class AppAuthLoginHandler(BaseHandler):
 ##   - register new user from within the app
 ################################
 class AppRegisterHandler(BaseHandler):
+    @httpBA
     @tornado.web.asynchronous
     def post(self):
         logging.getLogger("tornado.general").info("RegisterHandler::post...")
@@ -293,6 +295,7 @@ class AppRegisterHandler(BaseHandler):
 ##   - reset password from within the app
 ################################
 class AppResetPasswordHandler(BaseHandler):
+    @httpBA
     @tornado.web.asynchronous
     def post(self):
         logging.getLogger("tornado.general").info("MobileResetPasswordHandler::post...")
@@ -328,6 +331,7 @@ class AppResetPasswordHandler(BaseHandler):
 ##   - request reset password token from within the app b/c usr forgets password
 ################################
 class AppForgetPasswordHandler(BaseHandler):
+    @httpBA
     @tornado.web.asynchronous
     def post(self):
         logging.getLogger("tornado.general").info("AppForgetPasswordHandler::post...")
