@@ -5,6 +5,8 @@
 import smtplib, sys, optparse, urllib
 
 from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
+from string import Template
 
 def send_mail(msg_file, dest, name):
     ## Construct the message
@@ -33,10 +35,31 @@ def send_mail(msg_file, dest, name):
 def send_forgetpassword_mail(dest, name, token, email):
     ## Construct the message
     email_encode = urllib.quote(email, '')
-    msg = MIMEText('Dear ' + name + ',\n\n' + 'We understand you would like to change your password. Just click the link below and follow the prompts. Please do not forget your password is case sensitive.\n'+ 'Click to reset tot password: https://www.gettot.com/resetpasswordtoken?token=' + token + '&email=' + email_encode + '\n\n'+ 'You are kindly reminded that this token expires in 24 hours\n\n' + 'Sincerely,\n'+ '-Your friends at Team tot\n')
+    ##msg = MIMEText('Dear ' + name + ',\n\n' + 'We understand you would like to change your password. Just click the link below and follow the prompts. Please do not forget your password is case sensitive.\n'+ 'Click to reset tot password: https://www.gettot.com/resetpasswordtoken?token=' + token + '&email=' + email_encode + '\n\n'+ 'You are kindly reminded that this token expires in 24 hours\n\n' + 'Sincerely,\n'+ '-Your friends at Team tot\n')
+    msg = MIMEMultipart('alternative')
     msg['Subject'] = 'tot password request'
     msg['From'] = 'totdevteam@gmail.com' # me
     msg['To'] = dest  # you
+
+    # set email content
+    text = 'Dear ' + name + ',\n\n' + 'We understand you would like to change your password. Just click the link below and follow the prompts. Please do not forget your password is case sensitive.\n'+ 'Click to reset tot password: https://www.gettot.com/resetpasswordtoken?token=' + token + '&email=' + email_encode + '\n\n'+ 'You are kindly reminded that this token expires in 24 hours\n\n' + 'Sincerely,\n'+ '-Your friends at Team tot\n'
+    html = '''\
+	<html>
+   	<table background=http://2.bp.blogspot.com/-u7HB4nIOOaE/T4opljlXW1I/AAAAAAAAGCg/wLlOsHjsABs/s1600/Baby+Care++2.jpg>
+	<body><p>
+	<font size='3'>Hello {name_temp},<br><br>We understand you would like to change your password. Just click the link below and follow the prompts.<br><br>
+	https://www.gettot.com/resetpasswordtoken?token={token_temp}&email={email_temp}<br><br>
+	Sincerely,<br>
+	Your friends at Team tot.<br><br></font>
+	<font color="grey">If you haven't requested to reset your tot password, please email us at totdevteam@gmail.com</font>
+	</p>
+	</body>
+	</html>'''.format(name_temp=name, token_temp=token, email_temp=email_encode)
+    msg_txt = MIMEText(text, 'plain')
+    msg_html = MIMEText(html, 'html')
+    msg.attach(msg_txt)
+    msg.attach(msg_html)    
+	        
     #print 'sending msg:'
     #print msg.as_string()
     ## Setup SMTP server

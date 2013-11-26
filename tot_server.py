@@ -44,6 +44,16 @@ response_code = {'login_success': 0, 'login_unmatch': 1, 'login_no_usr': 2,
                  'reg_success': 0, 'reg_usr_exist': 11,
                  'reset_success': 0, 'reset_old_pc_wrong': 21, 'reset_no_usr': 22,
                  'retrieve_link_snd': 0, 'retrieve_fail': 31}
+response_msg = {'login_success': "::User login successful!", 
+		'login_unmatch': "::Email and password not match.", 
+		'login_no_usr': "::User email not found.",
+		'reg_success': "::Registration successful!",
+		'reg_usr_exist': "::Email already registered.",
+		'reset_success': "::Password reset successful!",
+		'reset_old_pc_wrong': "::Old password incorrect.",
+		'reset_no_usr': "::User email not found.",
+		'retrieve_link_snd': "::Reset passcode email has been sent to your email.",
+		'retrieve_fail': "::Cannot retrieve your information" }
 
 # HTTP Basic Authentication decorator
 def httpBA(method):
@@ -250,16 +260,16 @@ class AppAuthLoginHandler(BaseHandler):
         # find a match in the db
         user_db = self.db.get("SELECT * FROM users WHERE email = %s", str(email))
         if not user_db:
-            self.write(str(response_code['login_no_usr']))
+            self.write( str(response_code['login_no_usr']) + response_msg['login_no_usr'] )
             self.finish()
             return
         #if user_db.passcode != passcode:
         if not pbkdf2_sha256.verify(str(passcode), user_db.passcode):    
-            self.write(str(response_code['login_unmatch']))
+            self.write( str(response_code['login_unmatch']) + response_msg['login_unmatch'] )
             self.finish()
             return
 
-        self.write(str(response_code['login_success']))
+        self.write( str(response_code['login_success']) + response_msg['login_success'] )
         self.finish()
 
 ################################
@@ -277,7 +287,7 @@ class AppRegisterHandler(BaseHandler):
         usr_db = self.db.get("SELECT * FROM users WHERE email = %s", str(email))
         # email exists in db
         if usr_db:
-            self.write(str(response_code['reg_usr_exist']))
+            self.write( str(response_code['reg_usr_exist']) + response_msg['reg_usr_exist'] )
             self.finish()
             return
         # hash the passcode
@@ -289,7 +299,7 @@ class AppRegisterHandler(BaseHandler):
         # send confirmation email
         smtp_client.send_mail('./templates/welcome.txt', email, username)
         # send response to app
-        self.write(str(response_code['reg_success']))
+        self.write( str(response_code['reg_success']) + response_msg['reg_success'] )
         self.finish()
 
 ################################
@@ -307,12 +317,12 @@ class AppResetPasswordHandler(BaseHandler):
         # authenticate old passcode
         usr_db = self.db.get("SELECT * FROM users WHERE email = %s", str(email))
         if not usr_db :
-            self.write(str(response_code['reset_no_usr']))
+            self.write( str(response_code['reset_no_usr']) + response_msg['reset_no_usr'] )
             self.finish()
             return
         #if old_passcode != usr_db.passcode :
-        if not pbkdf2_sha256.verify(str(old_passcode), user_db.passcode): 
-            self.write(str(response_code['reset_old_pc_wrong']))
+        if not pbkdf2_sha256.verify(str(old_passcode), usr_db.passcode): 
+            self.write( str(response_code['reset_old_pc_wrong']) + response_msg['reset_old_pc_wrong'] )
             self.finish()
             return
         # hash the passcode
@@ -325,7 +335,7 @@ class AppResetPasswordHandler(BaseHandler):
         # smtp_client.send_mail('welcome.txt', email, username)
 
         # send response to app
-        self.write(str(response_code['reset_success']))
+        self.write( str(response_code['reset_success']) + response_msg['reset_success'] )
         self.finish()
 
 ################################
@@ -341,7 +351,7 @@ class AppForgetPasswordHandler(BaseHandler):
         # check whether the email is registered
         usr_db = self.db.get("SELECT * FROM users WHERE email = %s", str(email))
         if not usr_db :
-            self.write(str(response_code['retrieve_fail']))
+            self.write( str(response_code['retrieve_fail']) + response_msg['retrieve_fail'] )
 	    self.finish()
             return
         # create expiration date and uuid for the user
@@ -358,10 +368,13 @@ class AppForgetPasswordHandler(BaseHandler):
             self.db.execute(
                 "UPDATE ForgetPasswordUsers SET PasswordResetToken=%s, PasswordResetExpiration=%s WHERE email=%s", token, str_expire_date, str(email))
         # send an email with a reset password link
+        user_name = user_db.uname
+	if not user_name:
+		user_name = "tot user" 
         smtp_client.send_forgetpassword_mail(email, usr_db.uname, token, email)
 	
 	# send response to app
-        self.write(str(response_code['retrieve_link_snd']))
+        self.write( str(response_code['retrieve_link_snd']) + response_msg['retrieve_link_snd'] )
         self.finish()
 
 
