@@ -21,7 +21,7 @@ def SendDiagnosisEmail(msg_str, dest, code):
 	if code != 0:
 		msg_mime['Subject'] = '[URGENT] tot server experiences problems'
 	else:
-		msg_mime['Subject'] = '[RELAX] tot server runs well'
+		msg_mime['Subject'] = '[RELAX] tot server is running'
 	msg_mime['From'] = 'totdevteam@gmail.com'
 	msg_mime['To'] = dest
 
@@ -49,7 +49,8 @@ def TestServer():
 	elif ret_code == 2:
 		msg_str='Server OK but Databse down'
 	
-	receivers = ['lihangzhao@gmail.com', 'billhao@gmail.com', 'lxhung1984@gmail.com', 'zcjsword@gmail.com', 'lihangzhao@gmail.com']
+	receivers = ['lihangzhao@gmail.com', 'billhao@gmail.com', 'lxhuang1984@gmail.com', 'zcjsword@gmail.com']
+	#receivers = ['lihangzhao@gmail.com']
 
 	for dest in receivers:
 		SendDiagnosisEmail(msg_str, dest, ret_code)
