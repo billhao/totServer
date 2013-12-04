@@ -92,7 +92,8 @@ class Application(tornado.web.Application):
             (r"/m/login", AppAuthLoginHandler),
             (r"/m/reg", AppRegisterHandler),
             (r"/m/reset", AppResetPasswordHandler),
-            (r"/m/forget", AppForgetPasswordHandler)
+            (r"/m/forget", AppForgetPasswordHandler),
+	    (r"/test", ServerTestHandler)
         ]
         settings = dict(
             template_path=os.path.join(os.path.dirname(__file__), "templates"),
@@ -476,6 +477,20 @@ class ResetPasswordWithTokenHandler(BaseHandler):
         self.redirect("/")
         return
 
+################################
+##  ServerTestHandler
+################################
+class ServerTestHandler(BaseHandler):
+    @tornado.web.asynchronous
+    def get(self):
+	email = "test@gettot.com"
+	exist_usr = self.db.get("SELECT * FROM users WHERE email = %s", str(email))
+	if not exist_usr:
+		self.write("0")
+		self.finish()
+	else:
+		self.write("1")
+		self.finish()	
 
 ################################
 ##    main
