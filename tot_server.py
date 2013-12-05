@@ -313,8 +313,8 @@ class AppResetPasswordHandler(BaseHandler):
     def post(self):
         logging.getLogger("tornado.general").info("MobileResetPasswordHandler::post...")
         email = self.get_argument("email")
-        old_passcode = self.get_argument("old_passcode")
-        new_passcode = self.get_argument("new_passcode")
+        old_passcode = self.get_argument("oldpasscode")
+        new_passcode = self.get_argument("newpasscode")
         # authenticate old passcode
         usr_db = self.db.get("SELECT * FROM users WHERE email = %s", str(email))
         if not usr_db :
