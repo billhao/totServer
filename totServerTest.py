@@ -1,5 +1,7 @@
 import requests
 import smtplib, sys, optparse, urllib
+import tot_stats
+
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 
@@ -43,11 +45,18 @@ def TestServer():
 	ret_code = SendReqToServer()
 	msg_str = ''
 	if ret_code == 0:
-		msg_str='Server OK'
+		msg_str='Server OK\n\n'
 	elif ret_code == 1:
-		msg_str='Server down'
+		msg_str='Server down\n\n'
 	elif ret_code == 2:
-		msg_str='Server OK but Databse down'
+		msg_str='Server OK but Databse down\n\n'
+	
+	stats_list = tot_stats.processStats("nohup.out")
+	for stat in stats_list:
+		msg_str = msg_str + stat.to_str()
+	
+	print msg_str
+	return
 	
 	receivers = ['lihangzhao@gmail.com', 'billhao@gmail.com', 'lxhuang1984@gmail.com', 'zcjsword@gmail.com']
 	#receivers = ['lihangzhao@gmail.com']

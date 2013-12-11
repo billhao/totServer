@@ -15,7 +15,7 @@ class totStats:
 		self.cnt_login = 0
 		self.cnt_reg = 0
 	def to_str(self):
-		str_out = str(self.timestamp) + ' new_user: ' + str(self.cnt_reg) + ' login: ' + str(self.cnt_login)
+		str_out = str(self.timestamp) + ' new_user: ' + str(self.cnt_reg) + ' login: ' + str(self.cnt_login) + '\n'
 		return str_out
 		
 def processStats(filename):
