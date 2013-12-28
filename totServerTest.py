@@ -23,20 +23,20 @@ def SendDiagnosisEmail(msg_str, dest, code):
 	if code != 0:
 		msg_mime['Subject'] = '[URGENT] tot server experiences problems'
 	else:
-		msg_mime['Subject'] = '[RELAX] tot server is running'
+		msg_mime['Subject'] = '[RELAX] tot server is online'
 	msg_mime['From'] = 'totdevteam@gmail.com'
 	msg_mime['To'] = dest
 
 	## Setup SMTP server
-    	gmail_user = 'totdevteam@gmail.com'
-    	gmail_pwd = 'totdev2013'
-    	sender_id = 'totdevteam@tot.com'
-    	server = smtplib.SMTP('smtp.gmail.com',587)
-    	server.ehlo()
-    	server.starttls()
-    	server.ehlo
-    	server.login(gmail_user, gmail_pwd)
-    	server.sendmail(sender_id, dest, msg_mime.as_string())  	
+    user = 'totdevteam@163.com'
+    pwd = 'totusc'
+    sender_id = 'totdevteam@tot.com'
+    server = smtplib.SMTP('smtp.163.com',25)
+    server.ehlo()
+    server.starttls()
+    server.ehlo
+    server.login(user, pwd)
+    server.sendmail(sender_id, dest, msg_mime.as_string())  	
 	#print 'done!'
     	server.quit()
     	return	
@@ -51,7 +51,7 @@ def TestServer():
 	elif ret_code == 2:
 		msg_str='Server OK but Databse down\n\n'
 	
-	stats_list = tot_stats.processStats("nohup.out")
+	stats_list = tot_stats.processStats("/home/ec2-user/code-github/totServer/nohup.out")
 	for stat in stats_list:
 		msg_str = msg_str + stat.to_str()
 	
