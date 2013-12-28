@@ -28,16 +28,16 @@ def SendDiagnosisEmail(msg_str, dest, code):
 	msg_mime['To'] = dest
 
 	## Setup SMTP server
-    user = 'totdevteam@163.com'
-    pwd = 'totusc'
-    sender_id = 'totdevteam@tot.com'
-    server = smtplib.SMTP()
-	smtp.connect('smtp.163.com')
-    server.ehlo()
-    server.starttls()
-    server.ehlo
-    server.login(user, pwd)
-    server.sendmail(sender_id, dest, msg_mime.as_string())  	
+    	user = 'totdevteam@163.com'
+    	pwd = 'totusc'
+    	sender_id = 'totdevteam@163.com'
+    	server = smtplib.SMTP()
+	server.connect('smtp.163.com')
+    	server.ehlo()
+    	server.starttls()
+    	server.ehlo
+    	server.login(user, pwd)
+    	server.sendmail(sender_id, dest, msg_mime.as_string())  	
 	#print 'done!'
     	server.quit()
     	return	
@@ -53,9 +53,9 @@ def TestServer():
 		msg_str='Server OK but Databse down\n\n'
 	
 	stats_list = tot_stats.processStats("/home/ec2-user/code-github/totServer/nohup.out")
-    msg_str = msg_str + "++++++++++++++++++++++++++++++++\ntot server stats:\n++++++++++++++++++++++++++++++++\n"
-    for stat in stats_list:
-        msg_str = msg_str + stat.to_str()
+    	msg_str = msg_str + "++++++++++++++++++++++++++++++++\ntot server stats:\n++++++++++++++++++++++++++++++++\n"
+    	for stat in stats_list:
+        	msg_str = msg_str + stat.to_str()
 	
 	#print msg_str
 	#return
