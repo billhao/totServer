@@ -31,7 +31,8 @@ def SendDiagnosisEmail(msg_str, dest, code):
     user = 'totdevteam@163.com'
     pwd = 'totusc'
     sender_id = 'totdevteam@tot.com'
-    server = smtplib.SMTP('smtp.163.com',25)
+    server = smtplib.SMTP()
+	smtp.connect('smtp.163.com')
     server.ehlo()
     server.starttls()
     server.ehlo
@@ -52,11 +53,12 @@ def TestServer():
 		msg_str='Server OK but Databse down\n\n'
 	
 	stats_list = tot_stats.processStats("/home/ec2-user/code-github/totServer/nohup.out")
-	for stat in stats_list:
-		msg_str = msg_str + stat.to_str()
+    msg_str = msg_str + "++++++++++++++++++++++++++++++++\ntot server stats:\n++++++++++++++++++++++++++++++++\n"
+    for stat in stats_list:
+        msg_str = msg_str + stat.to_str()
 	
-	print msg_str
-	return
+	#print msg_str
+	#return
 	
 	receivers = ['lihangzhao@gmail.com', 'billhao@gmail.com', 'lxhuang1984@gmail.com', 'zcjsword@gmail.com']
 	#receivers = ['lihangzhao@gmail.com']
