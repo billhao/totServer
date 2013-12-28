@@ -268,8 +268,8 @@ class AppAuthLoginHandler(BaseHandler):
             self.finish()
             return
 		
-		# print out log
-		logging.getLogger("tornado.general").info("AppAuthLoginHandler User: " + email)
+	# print out log
+	logging.getLogger("tornado.general").info("AppAuthLoginHandler User: " + email)
 		
         self.write( str(response_code['login_success']) + response_msg['login_success'] )
         self.finish()
@@ -299,8 +299,8 @@ class AppRegisterHandler(BaseHandler):
             str(email), str(username), str(hash_pw))
         # send confirmation email
         smtp_client.send_mail('./templates/welcome.txt', email, username)
-		# print out log
-		logging.getLogger("tornado.general").info("AppRegisterHandler User: " + email)
+	# print out log
+	logging.getLogger("tornado.general").info("AppRegisterHandler User: " + email)
         # send response to app
         self.write( str(response_code['reg_success']) + response_msg['reg_success'] )
         self.finish()
@@ -336,8 +336,8 @@ class AppResetPasswordHandler(BaseHandler):
         # send notification email
         # smtp_client.send_mail('welcome.txt', email, username)
 		
-		# print out log
-		logging.getLogger("tornado.general").info("AppResetPasswordHandler User: " + email)
+	# print out log
+	logging.getLogger("tornado.general").info("AppResetPasswordHandler User: " + email)
 
         # send response to app
         self.write( str(response_code['reset_success']) + response_msg['reset_success'] )
@@ -373,14 +373,14 @@ class AppForgetPasswordHandler(BaseHandler):
                 "UPDATE ForgetPasswordUsers SET PasswordResetToken=%s, PasswordResetExpiration=%s WHERE email=%s", token, str_expire_date, str(email))
         # send an email with a reset password link
         user_name = user_db.uname
-		if not user_name:
-			user_name = "tot user" 
-		smtp_client.send_forgetpassword_mail(email, usr_db.uname, token, email)
-		# send response to app
+	if not user_name:
+	    user_name = "tot user" 
+	smtp_client.send_forgetpassword_mail(email, usr_db.uname, token, email)
+	# send response to app
         self.write( str(response_code['retrieve_link_snd']) + response_msg['retrieve_link_snd'] )
         self.finish()
-		# print out log
-		logging.getLogger("tornado.general").info("AppForgetPasswordHandler User: " + email)
+	# print out log
+	logging.getLogger("tornado.general").info("AppForgetPasswordHandler User: " + email)
 
 		
 ################################
