@@ -19,28 +19,29 @@ def SendReqToServer():
 	return 0
 		
 def SendDiagnosisEmail(msg_str, dest, code):
+	## Setup SMTP server
+	username = 'totdevteam'
+	password = 'totusc'
+	sender = 'totdevteam@163.com'
+	server = smtplib.SMTP()
+	server.connect('smtp.163.com')
+	server.login(username, password)
+	
+	## Setup mail content
 	msg_mime = MIMEText(msg_str)
 	if code != 0:
 		msg_mime['Subject'] = '[URGENT] tot server experiences problems'
 	else:
 		msg_mime['Subject'] = '[RELAX] tot server is online'
-	msg_mime['From'] = 'totdevteam@gmail.com'
+	msg_mime['From'] = sender
 	msg_mime['To'] = dest
-
-	## Setup SMTP server
-    	user = 'totdevteam@163.com'
-    	pwd = 'totusc'
-    	sender_id = 'totdevteam@163.com'
-    	server = smtplib.SMTP()
-	server.connect('smtp.163.com')
-    	server.ehlo()
-    	server.starttls()
-    	server.ehlo
-    	server.login(user, pwd)
-    	server.sendmail(sender_id, dest, msg_mime.as_string())  	
+	
+	## Send the mail
+	server.sendmail(sender, dest, msg_mime.as_string())
+	
 	#print 'done!'
-    	server.quit()
-    	return	
+	server.quit()
+	return	
 
 def TestServer():
 	ret_code = SendReqToServer()
@@ -53,16 +54,13 @@ def TestServer():
 		msg_str='Server OK but Databse down\n\n'
 	
 	stats_list = tot_stats.processStats("/home/ec2-user/code-github/totServer/nohup.out")
-    	msg_str = msg_str + "++++++++++++++++++++++++++++++++\ntot server stats:\n++++++++++++++++++++++++++++++++\n"
-    	for stat in stats_list:
-        	msg_str = msg_str + stat.to_str()
+	msg_str = msg_str + "++++++++++++++++++++++++++++++++\ntot server stats:\n++++++++++++++++++++++++++++++++\n"
+	for stat in stats_list:
+		msg_str = msg_str + stat.to_str()
 	
 	#print msg_str
 	#return
-	
 	receivers = ['lihangzhao@gmail.com', 'billhao@gmail.com', 'lxhuang1984@gmail.com', 'zcjsword@gmail.com']
-	#receivers = ['lihangzhao@gmail.com']
-
 	for dest in receivers:
 		SendDiagnosisEmail(msg_str, dest, ret_code)
 
