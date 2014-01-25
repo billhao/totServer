@@ -93,7 +93,8 @@ class Application(tornado.web.Application):
             (r"/m/reg", AppRegisterHandler),
             (r"/m/reset", AppResetPasswordHandler),
             (r"/m/forget", AppForgetPasswordHandler),
-	    (r"/test", ServerTestHandler)
+	    (r"/test", ServerTestHandler),
+	    (r"/m/usract", AppUserActHandler)
         ]
         settings = dict(
             template_path=os.path.join(os.path.dirname(__file__), "templates"),
@@ -372,7 +373,7 @@ class AppForgetPasswordHandler(BaseHandler):
             self.db.execute(
                 "UPDATE ForgetPasswordUsers SET PasswordResetToken=%s, PasswordResetExpiration=%s WHERE email=%s", token, str_expire_date, str(email))
         # send an email with a reset password link
-        user_name = user_db.uname
+        user_name = usr_db.uname
 	if not user_name:
 	    user_name = "tot user" 
 	smtp_client.send_forgetpassword_mail(email, usr_db.uname, token, email)
@@ -382,7 +383,21 @@ class AppForgetPasswordHandler(BaseHandler):
 	# print out log
 	logging.getLogger("tornado.general").info("AppForgetPasswordHandler User: " + email)
 
-		
+################################
+##   AppUserActHandler
+##   - log the user activity
+################################
+class AppUserActHandler(BaseHandler):
+    @httpBA
+    @tornado.web.asynchronous 
+    def post(self):
+	email = self.get_argument("email")
+	activity = self.get_argument("act")
+	# print out log
+        logging.getLogger("tornado.general").info("AppUserActHandler User: " + email + " Act: " + activity)
+
+
+
 ################################
 ##   ForgetPasswordHandler
 ##   - request reset password from web b/c usr forgets password

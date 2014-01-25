@@ -9,33 +9,32 @@ from email.mime.multipart import MIMEMultipart
 from string import Template
 
 def send_mail(msg_file, dest, name):
-    ## Construct the message
+    # Construct the message
     fp = open(msg_file, 'rb')
     msg = MIMEText('Dear ' + name + ',\n\n' + fp.read())
     fp.close()
     msg['Subject'] = 'Welcome to tot'
     msg['From'] = 'totdevteam@gmail.com' # me
     msg['To'] = dest  # you
-    #print 'sending msg:'
-    #print msg.as_string()
+    sender = 'totdevteam@gmail.com'
+    receiver = dest
     ## Setup SMTP server
-    gmail_user = 'totdevteam@gmail.com'
-    gmail_pwd = 'totdev2013'
-    sender_id = 'totdevteam@tot.com'
-    server = smtplib.SMTP('smtp.gmail.com',587)
-    server.ehlo()
-    server.starttls()
-    server.ehlo
-    server.login(gmail_user, gmail_pwd)
-    server.sendmail(sender_id, dest, msg.as_string())
-    #print 'done!'
-    server.quit()
+    smtp_server = 'email-smtp.us-east-1.amazonaws.com'  
+    smtp_user = 'AKIAJBMUQEV5LF7GWJQA'  
+    smtp_password = 'Am2tNXv7h3w/2ko7FJNEYMynUHv+r9DvM5s5vvB1FGyw'
+    ## Connect to SMTP server
+    smtp = smtplib.SMTP()  
+    smtp.connect(smtp_server)  
+    smtp.starttls()
+    smtp.login(smtp_user, smtp_password)  
+    smtp.sendmail(sender, receiver, msg.as_string())  
+    smtp.quit() 
+
     return
 
 def send_forgetpassword_mail(dest, name, token, email):
     ## Construct the message
     email_encode = urllib.quote(email, '')
-    ##msg = MIMEText('Dear ' + name + ',\n\n' + 'We understand you would like to change your password. Just click the link below and follow the prompts. Please do not forget your password is case sensitive.\n'+ 'Click to reset tot password: https://www.gettot.com/resetpasswordtoken?token=' + token + '&email=' + email_encode + '\n\n'+ 'You are kindly reminded that this token expires in 24 hours\n\n' + 'Sincerely,\n'+ '-Your friends at Team tot\n')
     msg = MIMEMultipart('alternative')
     msg['Subject'] = 'tot password request'
     msg['From'] = 'totdevteam@gmail.com' # me
@@ -60,20 +59,23 @@ def send_forgetpassword_mail(dest, name, token, email):
     msg.attach(msg_txt)
     msg.attach(msg_html)    
 	        
-    #print 'sending msg:'
     #print msg.as_string()
+    
+    ## config sender & receiver
+    sender = 'totdevteam@gmail.com'
+    receiver = dest
     ## Setup SMTP server
-    gmail_user = 'totdevteam@gmail.com'
-    gmail_pwd = 'totdev2013'
-    sender_id = 'totdevteam@tot.com'
-    server = smtplib.SMTP('smtp.gmail.com',587)
-    server.ehlo()
-    server.starttls()
-    server.ehlo
-    server.login(gmail_user, gmail_pwd)
-    server.sendmail(sender_id, dest, msg.as_string())
-    #print 'done!'
-    server.quit()
+    smtp_server = 'email-smtp.us-east-1.amazonaws.com'
+    smtp_user = 'AKIAJBMUQEV5LF7GWJQA'
+    smtp_password = 'Am2tNXv7h3w/2ko7FJNEYMynUHv+r9DvM5s5vvB1FGyw'
+    ## Connect to SMTP server
+    smtp = smtplib.SMTP()
+    smtp.connect(smtp_server)
+    smtp.starttls()
+    smtp.login(smtp_user, smtp_password)
+    smtp.sendmail(sender, receiver, msg.as_string())
+    smtp.quit()
+
     return
 
 def main(argv):
