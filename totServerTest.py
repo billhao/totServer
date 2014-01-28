@@ -57,8 +57,12 @@ def TestServer():
 	
 	# Process log file for stats
 	stats_list = tot_stats.processStats("/home/ec2-user/code-github/totServer/nohup.out")
-	for stat in stats_list:
-		msg_str = msg_str + stat.to_str()
+	MAX_TO_PRINT = 14 # 2 weeks
+        n = 0
+	for stat in reversed(stats_list):
+                msg_str = msg_str + stat.to_str()
+		n += 1
+		if n > MAX_TO_PRINT: break
 	
 	#print msg_str
 	
