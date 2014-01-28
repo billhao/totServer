@@ -17,7 +17,7 @@ class totStats:
 		self.cnt_reg = 0
 		self.cnt_usage = 0
 	def to_str(self):
-		str_out = str(self.timestamp) + ' new_user: ' + str(self.cnt_reg) + ' login: ' + str(self.cnt_login) + ' usage: ' + str(self.cnt_usage) + '\n'
+		str_out = str(self.timestamp) + '\t new_user: ' + str(self.cnt_reg) + '\t login: ' + str(self.cnt_login) + '\t usage: ' + str(self.cnt_usage) + '\n'
 		return str_out
 		
 def processStats(filename):
@@ -55,8 +55,12 @@ def processStats(filename):
 if __name__ == "__main__":
 	print "start processing log file..."
 	stats_list = processStats("nohup.out")
-	for stat in stats_list:
+	MAX_TO_PRINT = 14 # 2 weeks
+        n = 0
+	for stat in reversed(stats_list):
 		print(stat.to_str())
+		n += 1
+		if n > MAX_TO_PRINT: break
 	print "done"
 				
 					
