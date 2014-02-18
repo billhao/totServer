@@ -94,7 +94,8 @@ class Application(tornado.web.Application):
             (r"/m/reset", AppResetPasswordHandler),
             (r"/m/forget", AppForgetPasswordHandler),
 	    (r"/test", ServerTestHandler),
-	    (r"/m/usract", AppUserActHandler)
+	    (r"/m/usract", AppUserActHandler),
+	    (r"/showlog", LogHandler)
         ]
         settings = dict(
             template_path=os.path.join(os.path.dirname(__file__), "templates"),
@@ -510,6 +511,17 @@ class ServerTestHandler(BaseHandler):
 	else:
 		self.write("1")
 		self.finish()	
+
+################################
+## LogHandler
+################################
+class LogHandler(BaseHandler):
+    @tornado.web.asynchronous
+    def get(self):
+    	self.render('/home/ec2-user/totServerLogs/overall_log.txt')
+	self.finish()
+
+
 
 ################################
 ##    main

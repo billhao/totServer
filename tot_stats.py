@@ -3,7 +3,7 @@
 ## Copyright @ totdevteam
 ##
 
-import sys
+import sys, os, operator
 
 class totStats:
 	"""collection of stats counters"""
@@ -17,51 +17,85 @@ class totStats:
 		self.cnt_reg = 0
 		self.cnt_usage = 0
 	def to_str(self):
-		str_out = str(self.timestamp) + '\t new_user: ' + str(self.cnt_reg) + '\t login: ' + str(self.cnt_login) + '\t usage: ' + str(self.cnt_usage) + '\n'
+		str_out = str(self.timestamp) + '\t|\t' + str(self.cnt_reg) + '\t|\t' + str(self.cnt_login) + '\t|\t' + str(self.cnt_usage) + '\n'
 		return str_out
 		
-def processStats(filename):
-	try:
-		f_open = open(str(filename), "r")
-		lines = f_open.readlines()
-	except IOError as e:
-		print "File I/O error({0}): {1}".format(e.errno, e.strerror)
+def processStats(filename_list):
+	stats_list = []  # list of totStats objects. one for each timestamp (day)	
 
-	stats_list = []  # list of totStats objects. one for each timestamp (day)
-	for line in lines:
-		words = line.split()
-		if len(words) < 7:
-			continue # skip a line
-		event = words[4]
-		if event == "AppRegisterHandler" or event == "AppAuthLoginHandler" or event == "AppUserActHandler":
-			timestamp = int(words[1])
-			if len(stats_list) == 0:
-				the_totStats = totStats(timestamp)
-				stats_list.append(the_totStats)
-			else:
-				if stats_list[len(stats_list)-1].timestamp == timestamp:
-					the_totStats = stats_list[len(stats_list)-1]
-				else:
+
+	for filename in filename_list:
+		# open file
+		try:
+			f_open = open(str(filename), "r")
+			lines = f_open.readlines()
+		except IOError as e:
+			print "File I/O error({0}): {1}".format(e.errno, e.strerror)
+		# parse the lines
+		for line in lines:
+			words = line.split()
+			if len(words) < 7:
+				continue # skip a line
+			event = words[4]  # [FIXME] use magic number here
+			if event == "AppRegisterHandler" or event == "AppAuthLoginHandler" or event == "AppUserActHandler":
+				timestamp = int(words[1])
+				if len(stats_list) == 0:
 					the_totStats = totStats(timestamp)
 					stats_list.append(the_totStats)
-			if event == "AppRegisterHandler":
-				the_totStats.cnt_reg += 1
-			elif event == "AppAuthLoginHandler":
-				the_totStats.cnt_login += 1
-			elif event == "AppUserActHandler":
-				the_totStats.cnt_usage += 1
+				else:
+					found_flag = 0
+					for stat in stats_list:
+						if stat.timestamp == timestamp:
+							the_totStats = stat			
+							found_flag = 1
+
+					if found_flag == 0:
+						the_totStats = totStats(timestamp)
+						stats_list.append(the_totStats)
+				if event == "AppRegisterHandler":
+					the_totStats.cnt_reg += 1
+				elif event == "AppAuthLoginHandler":
+					the_totStats.cnt_login += 1
+				elif event == "AppUserActHandler":
+					the_totStats.cnt_usage += 1
+	
 	return stats_list
 
 if __name__ == "__main__":
-	print "start processing log file..."
-	stats_list = processStats("nohup.out")
-	MAX_TO_PRINT = 14 # 2 weeks
-        n = 0
+	# process CLI
+	process_all_logs = 0;
+	if len(sys.argv) > 1:
+		process_all_logs = 1	
+	
+	#print 'process_all_log=' + str(process_all_logs)
+	# process logs
+	#print "start processing log file..."
+	stats_list = []
+	log_list = []
+	if process_all_logs == 0:
+		log_list.append('/home/ec2-user/code-github/totServer/nohup.out')
+		stats_list = processStats(log_list)
+	else:
+		LOG_DIR = '/home/ec2-user/totServerLogs/'
+		f_list = os.listdir(LOG_DIR)
+		for item in f_list:
+			item = LOG_DIR + item
+			log_list.append(item)
+		stats_list = processStats(log_list)
+
+	# sort stats_lisg
+	stats_list.sort(key=operator.attrgetter('timestamp'), reverse=False)
+
+	# print stats
+	stat_str = ''
+	f = open('/home/ec2-user/totServerLogs/overall_log.txt','w')
+	f.write('date\t|\tnew_user\t|\tlogin\t|\tusage\n<br>')
 	for stat in reversed(stats_list):
-		print(stat.to_str())
-		n += 1
-		if n > MAX_TO_PRINT: break
-	print "done"
+		#print(stat.to_str())
+		stat_str = stat_str + '<br>' + stat.to_str()
+		f.write(stat.to_str() + '\n<br><HR>')
+	#print stat_str
+	#print 'done'
 				
 					
 			

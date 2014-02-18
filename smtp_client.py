@@ -11,7 +11,7 @@ from string import Template
 def send_mail(msg_file, dest, name):
     # Construct the message
     fp = open(msg_file, 'rb')
-    msg = MIMEText('Dear ' + name + ',\n\n' + fp.read())
+    msg = MIMEText('Dear parents' + ',\n\n' + fp.read())
     fp.close()
     msg['Subject'] = 'Welcome to tot'
     msg['From'] = 'totdevteam@gmail.com' # me
@@ -41,7 +41,7 @@ def send_forgetpassword_mail(dest, name, token, email):
     msg['To'] = dest  # you
 
     # set email content
-    text = 'Dear ' + name + ',\n\n' + 'We understand you would like to change your password. Just click the link below and follow the prompts. Please do not forget your password is case sensitive.\n'+ 'Click to reset tot password: https://www.gettot.com/resetpasswordtoken?token=' + token + '&email=' + email_encode + '\n\n'+ 'You are kindly reminded that this token expires in 24 hours\n\n' + 'Sincerely,\n'+ '-Your friends at Team tot\n'
+    text = 'Dear tot user,\n\n' + 'We understand you would like to change your password. Just click the link below and follow the prompts. Please do not forget your password is case sensitive.\n'+ 'Click to reset tot password: https://www.gettot.com/resetpasswordtoken?token=' + token + '&email=' + email_encode + '\n\n'+ 'You are kindly reminded that this token expires in 24 hours\n\n' + 'Sincerely,\n'+ '-Your friends at tot\n'
     html = '''\
 	<html>
    	<table background=http://2.bp.blogspot.com/-u7HB4nIOOaE/T4opljlXW1I/AAAAAAAAGCg/wLlOsHjsABs/s1600/Baby+Care++2.jpg>

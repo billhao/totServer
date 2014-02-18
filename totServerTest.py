@@ -49,14 +49,16 @@ def TestServer():
 	ret_code = SendReqToServer()
 	msg_str = ''
 	if ret_code == 0:
-		msg_str='Server OK\nUsage Summary:\n'
+		msg_str='Server OK\n\n'
 	elif ret_code == 1:
 		msg_str='Server down\n\n'
 	elif ret_code == 2:
 		msg_str='Server OK but Databse down\n\n'
-	
+	msg_str = msg_str + 'Date \t NewUser \t Login\t Usage\n-----------------------------\n'	
+
 	# Process log file for stats
-	stats_list = tot_stats.processStats("/home/ec2-user/code-github/totServer/nohup.out")
+	log_file = ['/home/ec2-user/code-github/totServer/nohup.out']
+	stats_list = tot_stats.processStats(log_file)
 	MAX_TO_PRINT = 14 # 2 weeks
         n = 0
 	for stat in reversed(stats_list):
